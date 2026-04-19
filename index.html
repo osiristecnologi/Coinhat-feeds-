@@ -1,73 +1,178 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>CoinHat 🧢</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoinHat Feeds 🤠</title>
 
 <style>
 body {
+  margin: 0;
+  font-family: Arial;
   background: #0d1117;
   color: white;
-  font-family: Arial;
-  text-align: center;
 }
 
-.box {
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #161b22;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.lang-btn {
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.container {
+  display: flex;
+}
+
+.feed {
+  flex: 3;
+  padding: 15px;
+}
+
+.coin {
   background: #1f2937;
-  margin: 20px;
-  padding: 20px;
-  border-radius: 12px;
-  display: inline-block;
-  min-width: 250px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 10px;
 }
 
 .up { color: #00ff88; }
 .down { color: #ff4d4d; }
 
-button {
+.ads {
+  flex: 1;
+  background: #111827;
+  padding: 15px;
+  border-left: 1px solid #333;
+}
+
+.adbox {
+  background: #1f2937;
   padding: 10px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 8px;
-  background: gold;
+  margin-bottom: 10px;
+  border-radius: 10px;
+}
+
+.lang-menu {
+  position: absolute;
+  top: 50px;
+  right: 10px;
+  background: #1f2937;
+  padding: 10px;
+  border-radius: 10px;
+  display: none;
+}
+
+.lang-menu div {
+  padding: 5px;
   cursor: pointer;
+}
+
+.lang-menu div:hover {
+  background: #374151;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🧢 CoinHat</h1>
+<header>
+  <div class="logo">🤠 CoinHat Feeds</div>
+  <div class="lang-btn" onclick="toggleLang()">🌎</div>
+</header>
 
-<div class="box">
-  <h2>Sua moeda</h2>
-  <p id="price">Carregando...</p>
-  <p id="change"></p>
+<div class="lang-menu" id="langMenu">
+  <div onclick="setLang('pt')">🇧🇷 Português</div>
+  <div onclick="setLang('en')">🇺🇸 English</div>
+  <div onclick="setLang('zh')">🇨🇳 中文</div>
+  <div onclick="setLang('es')">🇪🇸 Español</div>
+  <div onclick="setLang('jp')">🇯🇵 日本語</div>
+  <div onclick="setLang('ru')">🇷🇺 Русский</div>
+  <div onclick="setLang('ar')">🇸🇦 العربية</div>
+</div>
 
-  <button onclick="alert('Em breve 🚀')">Comprar</button>
+<div class="container">
+
+  <div class="feed">
+    <h2 id="title">Mercado Cripto</h2>
+    <div id="coins"></div>
+  </div>
+
+  <div class="ads">
+    <h3 id="adsTitle">Anúncios</h3>
+
+    <div class="adbox">🚀 Liste sua memecoin aqui</div>
+    <div class="adbox">📢 Publicidade cripto disponível</div>
+    <div class="adbox">🤠 CoinHat Ads Network</div>
+
+  </div>
+
 </div>
 
 <script>
-// JavaScript aqui 👇
 
-function atualizar() {
-  let price = (Math.random() * 0.05).toFixed(4);
-  let change = (Math.random() * 20 - 10).toFixed(2);
+const texts = {
+  pt: { title: "Mercado Cripto", ads: "Anúncios" },
+  en: { title: "Crypto Market", ads: "Ads" },
+  zh: { title: "加密市场", ads: "广告" },
+  es: { title: "Mercado Cripto", ads: "Anuncios" },
+  jp: { title: "暗号市場", ads: "広告" },
+  ru: { title: "Крипто рынок", ads: "Реклама" },
+  ar: { title: "سوق العملات", ads: "إعلانات" }
+};
 
-  document.getElementById("price").innerText = "Preço: R$ " + price;
+let currentLang = "pt";
 
-  let el = document.getElementById("change");
-  el.innerText = "24h: " + change + "%";
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById("title").innerText = texts[lang].title;
+  document.getElementById("adsTitle").innerText = texts[lang].ads;
+  toggleLang();
+}
 
-  if (change >= 0) {
-    el.className = "up";
-  } else {
-    el.className = "down";
+function toggleLang() {
+  const menu = document.getElementById("langMenu");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+async function loadCoins() {
+  const url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,dogecoin,shiba-inu,pepe,ethereum&vs_currencies=usd&include_24hr_change=true";
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const container = document.getElementById("coins");
+  container.innerHTML = "";
+
+  for (let coin in data) {
+    let price = data[coin].usd;
+    let change = data[coin].usd_24h_change.toFixed(2);
+
+    container.innerHTML += `
+      <div class="coin">
+        <strong>${coin.toUpperCase()}</strong><br>
+        $${price}<br>
+        <span class="${change >= 0 ? "up" : "down"}">
+          24h: ${change}%
+        </span>
+      </div>
+    `;
   }
 }
 
-atualizar();
-setInterval(atualizar, 3000);
+loadCoins();
+setInterval(loadCoins, 10000);
 
 </script>
 
