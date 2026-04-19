@@ -10,58 +10,57 @@ body{
  margin:0;
  font-family:Arial;
  background:#f5f7ff;
- color:#111;
 }
 
+/* HEADER */
 header{
  display:flex;
- justify-content:space-between;
  align-items:center;
- padding:12px;
+ justify-content:space-between;
+ padding:10px;
  background:#fff;
  border-bottom:2px solid #00c2ff;
 }
 
-.icon{
- font-size:26px;
- cursor:pointer;
- color:#00aaff;
+/* SEARCH */
+.search{
+ flex:1;
+ margin:0 10px;
+ position:relative;
+}
+
+.search input{
+ width:100%;
+ padding:10px 15px 10px 40px;
+ border-radius:20px;
+ border:1px solid #00c2ff;
+}
+
+.search span{
+ position:absolute;
+ left:10px;
+ top:50%;
+ transform:translateY(-50%);
 }
 
 /* MENU */
-.sidebar{
- position:fixed;
- left:-320px;
- top:0;
- width:300px;
- height:100%;
- background:#fff;
- padding:15px;
- transition:0.3s;
- overflow-y:auto;
- box-shadow:2px 0 10px rgba(0,0,0,0.1);
-}
-.sidebar.open{left:0;}
-
-.closeBtn{
+.icon{
+ font-size:24px;
  cursor:pointer;
- font-size:18px;
- color:#00aaff;
- margin-bottom:10px;
- display:block;
 }
 
-/* NEWS */
-.news{
- background:#eef7ff;
- margin:8px 0;
+/* NEWS TOP */
+.news-bar{
+ background:#eaf6ff;
  padding:10px;
- border-left:4px solid #00c2ff;
- border-radius:8px;
- font-size:13px;
 }
 
-/* GRID */
+.news{
+ margin:5px 0;
+ font-size:14px;
+}
+
+/* CARDS */
 .panel{
  display:flex;
  flex-wrap:wrap;
@@ -72,40 +71,17 @@ header{
  background:#fff;
  margin:10px;
  padding:12px;
- border-radius:12px;
+ border-radius:10px;
  width:220px;
  border:1px solid #d0eaff;
 }
 
-/* TITLE */
 .title{
- margin:15px;
+ margin:10px;
  color:#00aaff;
  font-weight:bold;
 }
 
-/* LANG */
-.lang{
- display:none;
- position:absolute;
- right:10px;
- top:55px;
- background:#fff;
- padding:10px;
- border:1px solid #00c2ff;
- border-radius:10px;
-}
-
-.lang button{
- display:block;
- margin:5px 0;
- border:1px solid #00c2ff;
- background:none;
- color:#00aaff;
- cursor:pointer;
-}
-
-/* CHART */
 canvas{
  width:100%;
  height:60px;
@@ -115,139 +91,98 @@ canvas{
 
 <body>
 
-<!-- MENU -->
-<div class="sidebar" id="sidebar">
- <span class="closeBtn" onclick="toggleMenu()">← Fechar</span>
- <h3>📰 Notícias</h3>
- <div id="newsBox">Carregando...</div>
-</div>
-
-<!-- HEADER -->
 <header>
- <div class="icon" onclick="toggleMenu()">☰</div>
- <h3>CoinHatFeeds</h3>
- <div class="icon" onclick="toggleLang()">🌍</div>
+ <div class="icon">☰</div>
+
+ <div class="search">
+  <span>🔍</span>
+  <input id="search" placeholder="Buscar por contrato (0x... / sol...)">
+ </div>
+
+ <div class="icon">🌍</div>
 </header>
 
-<!-- LANG -->
-<div class="lang" id="langBox">
- <button onclick="setLang('pt')">PT</button>
- <button onclick="setLang('en')">EN</button>
- <button onclick="setLang('es')">ES</button>
- <button onclick="setLang('zh')">ZH</button>
- <button onclick="setLang('ja')">JA</button>
- <button onclick="setLang('ar')">AR</button>
+<!-- NOTÍCIAS FIXAS -->
+<div class="news-bar">
+ <div class="news">📰 Bitcoin dispara com entrada institucional</div>
+ <div class="news">📰 Ethereum reduz taxas e atrai novos usuários</div>
+ <div class="news">📰 Memecoins da Solana voltam a bombar</div>
 </div>
 
-<!-- MEMES -->
-<div class="title" id="title">🚀 Memecoins em Alta</div>
+<div class="title">🚀 Memecoins em Alta</div>
 <div class="panel" id="memes"></div>
 
 <script>
 
-let lang="pt";
+// ================= SEARCH BY CONTRACT =================
+document.getElementById("search").addEventListener("change", async (e)=>{
 
-// MENU
-function toggleMenu(){
- document.getElementById("sidebar").classList.toggle("open");
-}
+ let q = e.target.value.trim();
+ if(!q) return;
 
-// LANG
-function toggleLang(){
- let b=document.getElementById("langBox");
- b.style.display=b.style.display==="block"?"none":"block";
-}
+ const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`);
+ const data = await res.json();
 
-const t={
- pt:"🚀 Memecoins em Alta",
- en:"🚀 Trending Memecoins",
- es:"🚀 Memecoins Tendencia",
- zh:"🚀 热门迷因币",
- ja:"🚀 ミームコイン",
- ar:"🚀 ميمكوين"
-};
+ const box = document.getElementById("memes");
+ box.innerHTML = "";
 
-function setLang(l){
- lang=l;
- document.getElementById("title").innerText=t[l];
-}
-
-// ================= NEWS REAL (RSS SEM API KEY) =================
-async function loadNews(){
-
- const box=document.getElementById("newsBox");
-
- try{
-  const res=await fetch(
-  "https://api.allorigins.win/get?url=https://www.coindesk.com/arc/outboundfeeds/rss/"
-  );
-  const data=await res.json();
-
-  const parser=new DOMParser();
-  const xml=parser.parseFromString(data.contents,"text/xml");
-
-  const items=[...xml.querySelectorAll("item")].slice(0,3);
-
-  box.innerHTML="";
-
-  items.forEach(i=>{
-   const title=i.querySelector("title").textContent;
-   const link=i.querySelector("link").textContent;
-
-   box.innerHTML+=`
-   <div class="news">
-    📰 <a href="${link}" target="_blank">${title}</a>
-   </div>`;
-  });
-
- }catch(e){
-  box.innerHTML="Erro ao carregar notícias";
+ if(!data.pairs){
+  box.innerHTML = "Token não encontrado";
+  return;
  }
-}
 
-// ================= MEMECOINS + PREÇO + GRÁFICO =================
+ data.pairs.slice(0,5).forEach(p=>{
+  box.innerHTML += `
+   <div class="card">
+    <h3>${p.baseToken.symbol}</h3>
+    <p>$${p.priceUsd || "?"}</p>
+    <p>${p.baseToken.name}</p>
+   </div>
+  `;
+ });
+
+});
+
+// ================= MEMECOINS =================
 async function loadMemes(){
 
- const box=document.getElementById("memes");
+ const box = document.getElementById("memes");
  box.innerHTML="Carregando...";
 
- const res=await fetch("https://api.coingecko.com/api/v3/search/trending");
- const data=await res.json();
+ const res = await fetch("https://api.coingecko.com/api/v3/search/trending");
+ const data = await res.json();
 
- const coins=(data.coins||[]).slice(0,10);
+ const coins = data.coins.slice(0,8);
 
  box.innerHTML="";
 
  for(let i of coins){
 
-  let id=i.item.id;
+  let id = i.item.id;
 
-  let r=await fetch(
+  let r = await fetch(
   `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${id}&sparkline=true`
   );
 
-  let d=await r.json();
-  let c=d[0];
+  let d = await r.json();
+  let c = d[0];
 
   if(!c) continue;
 
-  box.innerHTML+=`
+  box.innerHTML += `
   <div class="card">
    <h3>${c.symbol.toUpperCase()}</h3>
    <p>$${c.current_price}</p>
-   <p style="color:${c.price_change_percentage_24h>0?'green':'red'}">
-   ${c.price_change_percentage_24h.toFixed(2)}%
-   </p>
    <canvas id="c-${c.id}"></canvas>
   </div>`;
 
   setTimeout(()=>{
-   draw(`c-${c.id}`,c.sparkline_in_7d.price);
+   draw(`c-${c.id}`, c.sparkline_in_7d.price);
   },200);
  }
 }
 
-// CHART
+// ================= CHART =================
 function draw(id,data){
  const c=document.getElementById(id);
  if(!c) return;
@@ -273,7 +208,6 @@ function draw(id,data){
 }
 
 // INIT
-loadNews();
 loadMemes();
 
 </script>
