@@ -21,15 +21,10 @@ header {
     background:#111133;
 }
 
-.menu {
+.hamburger {
     font-size:28px;
     cursor:pointer;
-}
-
-.search {
-    flex:1;
-    margin:0 10px;
-    position:relative;
+    user-select:none;
 }
 
 .search input {
@@ -38,6 +33,19 @@ header {
     border-radius:20px;
     border:none;
 }
+
+.sidebar {
+    position:fixed;
+    left:-260px;
+    top:0;
+    width:250px;
+    height:100%;
+    background:#111;
+    padding:10px;
+    transition:0.3s;
+}
+
+.sidebar.open { left:0; }
 
 .panel {
     display:flex;
@@ -53,30 +61,8 @@ header {
     width:200px;
 }
 
-.sidebar {
-    position:fixed;
-    left:-260px;
-    top:0;
-    width:250px;
-    height:100%;
-    background:#111;
-    padding:10px;
-    transition:0.3s;
-}
-
-.sidebar.open {
-    left:0;
-}
-
-.lang button {
-    margin:5px;
-    padding:5px;
-    cursor:pointer;
-}
-
 .section-title {
     margin:15px;
-    font-size:18px;
     color:#00ffcc;
 }
 </style>
@@ -84,63 +70,38 @@ header {
 
 <body>
 
+<!-- MENU -->
 <div class="sidebar" id="sidebar">
     <h3>Menu</h3>
-    <button onclick="loadMemecoins()">🐸 Memecoins Top 10</button>
+    <button onclick="loadMemes()">🚀 Trending Memecoins</button>
     <button onclick="loadNews()">📰 Crypto News</button>
 </div>
 
 <header>
-    <div class="menu" onclick="toggleMenu()">🍔</div>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
 
     <div class="search">
         <input id="search" placeholder="Search coin...">
     </div>
-
-    <div class="lang">
-        <button onclick="setLang('en')">EN</button>
-        <button onclick="setLang('pt')">PT</button>
-        <button onclick="setLang('es')">ES</button>
-        <button onclick="setLang('zh')">ZH</button>
-        <button onclick="setLang('ja')">JA</button>
-        <button onclick="setLang('ar')">AR</button>
-    </div>
 </header>
 
-<div class="section-title" id="titleCoins">Live Market</div>
+<div class="section-title">Live Market</div>
 <div class="panel" id="coins"></div>
 
-<div class="section-title" id="titleExtra">Loading...</div>
+<div class="section-title">🔥 Trending Memecoins</div>
 <div class="panel" id="extra"></div>
 
 <script>
 
-let lang = "en";
-
-const dict = {
- en:{market:"Live Market",memes:"Memecoins Top 10",news:"Crypto News"},
- pt:{market:"Mercado ao Vivo",memes:"Top 10 Memecoins",news:"Notícias Cripto"},
- es:{market:"Mercado en Vivo",memes:"Top Memecoins",news:"Noticias Cripto"},
- zh:{market:"实时市场",memes:"迷因币前10",news:"加密新闻"},
- ja:{market:"ライブ市場",memes:"ミームコインTOP10",news:"暗号ニュース"},
- ar:{market:"السوق المباشر",memes:"أفضل 10 ميمكوين",news:"أخبار العملات"}
-};
-
-function setLang(l){
- lang = l;
- document.getElementById("titleCoins").innerText = dict[l].market;
- document.getElementById("titleExtra").innerText = dict[l].memes;
- loadCoins();
-}
-
+// ================= MENU =================
 function toggleMenu(){
  document.getElementById("sidebar").classList.toggle("open");
 }
 
-// ================= COINS =================
+// ================= MARKET =================
 async function loadCoins(){
  const res = await fetch(
- "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1&sparkline=false"
+ "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1"
  );
  const data = await res.json();
 
@@ -160,42 +121,54 @@ async function loadCoins(){
  });
 }
 
-// ================= MEMECOINS =================
-async function loadMemecoins(){
+// ================= MEMECOINS (HYPE REAL) =================
+async function loadMemes(){
+
  const res = await fetch(
- "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=meme-token&order=market_cap_desc&per_page=10&page=1"
+ "https://api.coingecko.com/api/v3/search/trending"
  );
  const data = await res.json();
 
  let box = document.getElementById("extra");
  box.innerHTML = "";
 
- data.forEach(c=>{
+ data.coins.forEach(item=>{
+  let c = item.item;
+
   box.innerHTML += `
    <div class="card">
-    <h3>🐸 ${c.symbol.toUpperCase()}</h3>
-    <p>$${c.current_price}</p>
+    <h3>🐸 ${c.symbol}</h3>
+    <p>${c.name}</p>
+    <small>#${c.market_cap_rank || "new"}</small>
    </div>
   `;
  });
 }
 
-// ================= NEWS (API READY) =================
+// ================= NEWS REAL =================
 async function loadNews(){
 
- // 🔴 Trocar por NewsAPI ou CryptoPanic key
- const fakeNews = [
-  "Bitcoin breaks resistance level",
-  "Ethereum gas fees drop",
-  "New memecoin trend rises"
- ];
-
  let box = document.getElementById("extra");
- box.innerHTML = "";
+ box.innerHTML = "Loading news...";
 
- fakeNews.slice(0,3).forEach(n=>{
-  box.innerHTML += `<div class="card">📰 ${n}</div>`;
- });
+ try {
+    const res = await fetch(
+    "https://api.coingecko.com/api/v3/status_updates"
+    );
+    const data = await res.json();
+
+    box.innerHTML = "";
+
+    data.status_updates.slice(0,3).forEach(n=>{
+        box.innerHTML += `
+        <div class="card">
+            📰 ${n.description.slice(0,100)}...
+        </div>`;
+    });
+
+ } catch(e){
+    box.innerHTML = "No news available";
+ }
 }
 
 // ================= SEARCH =================
