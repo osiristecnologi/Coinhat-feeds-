@@ -2,9 +2,7 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 // ================= SAFE GET =================
-function el(id){
- return document.getElementById(id);
-}
+const el = (id)=>document.getElementById(id);
 
 // ================= MENU =================
 window.toggleMenu = () => {
@@ -46,19 +44,19 @@ window.setLang = (lang)=>{
  const t = translations[lang];
  if(!t) return;
 
- if(el("title")) el("title").innerText = t.title;
- if(el("newsTitle")) el("newsTitle").innerText = t.news;
- if(el("search")) el("search").placeholder = t.search;
+ el("title") && (el("title").innerText = t.title);
+ el("newsTitle") && (el("newsTitle").innerText = t.news);
+ el("search") && (el("search").placeholder = t.search);
 
  document.querySelectorAll(".news-card").forEach((card,i)=>{
   if(t.newsList[i]) card.innerText = t.newsList[i];
  });
 
- if(el("langBox")) el("langBox").style.display="none";
+ el("langBox") && (el("langBox").style.display="none");
 };
 
 // ================= SEARCH =================
-let searchInput = el("search");
+const searchInput = el("search");
 
 if(searchInput){
  searchInput.addEventListener("keydown", async (e)=>{
@@ -67,33 +65,29 @@ if(searchInput){
   let q=e.target.value.trim();
   if(!q) return;
 
+  const box=el("memes");
+  box.innerHTML="Buscando...";
+
   try{
    const res=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${q}`);
    const data=await res.json();
-
-   const box=el("memes");
-   if(!box) return;
-
-   box.innerHTML="";
 
    if(!data.pairs){
     box.innerHTML="Token não encontrado";
     return;
    }
 
-   data.pairs.slice(0,5).forEach(p=>{
-    box.innerHTML+=`
+   box.innerHTML = data.pairs.slice(0,5).map(p=>`
      <div class="card">
       <h3>${p.baseToken.symbol}</h3>
       <p>$${p.priceUsd || "?"}</p>
       <p>${p.baseToken.name}</p>
      </div>
-    `;
-   });
+   `).join("");
 
   }catch(err){
    console.log(err);
-   el("memes").innerHTML="Erro na busca";
+   box.innerHTML="Erro na busca";
   }
  });
 }
@@ -117,23 +111,21 @@ async function loadMemes(){
 
   const coins = await r.json();
 
-  box.innerHTML="";
-
-  coins.forEach(c=>{
-   box.innerHTML+=`
+  box.innerHTML = coins.map(c=>`
     <div class="card">
      <h3>${c.symbol.toUpperCase()}</h3>
      <p>$${c.current_price}</p>
      <canvas id="c-${c.id}"></canvas>
     </div>
-   `;
+  `).join("");
 
-   setTimeout(()=>{
-    draw(`c-${c.id}`,c.sparkline_in_7d.price);
-   },50);
+  // desenha depois que DOM existe
+  coins.forEach(c=>{
+    draw(`c-${c.id}`, c.sparkline_in_7d.price);
   });
 
  }catch(e){
+  console.log(e);
   box.innerHTML="Erro ao carregar";
  }
 }
@@ -141,7 +133,7 @@ async function loadMemes(){
 // ================= CHART =================
 function draw(id,data){
  const c=el(id);
- if(!c) return;
+ if(!c || !data) return;
 
  const ctx=c.getContext("2d");
  c.width=220;
@@ -149,6 +141,9 @@ function draw(id,data){
 
  let min=Math.min(...data);
  let max=Math.max(...data);
+
+ // evita divisão por zero
+ if(max === min) max = min + 1;
 
  ctx.strokeStyle="#00aaff";
  ctx.beginPath();
