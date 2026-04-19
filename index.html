@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>CoinHat 🧢</title>
+
+<style>
+body {
+  background: #0d1117;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+
+.box {
+  background: #1f2937;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  display: inline-block;
+  min-width: 250px;
+}
+
+.up { color: #00ff88; }
+.down { color: #ff4d4d; }
+
+button {
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background: gold;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🧢 CoinHat</h1>
+
+<div class="box">
+  <h2>Sua moeda</h2>
+  <p id="price">Carregando...</p>
+  <p id="change"></p>
+
+  <button onclick="alert('Em breve 🚀')">Comprar</button>
+</div>
+
+<script>
+// JavaScript aqui 👇
+
+function atualizar() {
+  let price = (Math.random() * 0.05).toFixed(4);
+  let change = (Math.random() * 20 - 10).toFixed(2);
+
+  document.getElementById("price").innerText = "Preço: R$ " + price;
+
+  let el = document.getElementById("change");
+  el.innerText = "24h: " + change + "%";
+
+  if (change >= 0) {
+    el.className = "up";
+  } else {
+    el.className = "down";
+  }
+}
+
+atualizar();
+setInterval(atualizar, 3000);
+
+</script>
+
+</body>
+</html>
