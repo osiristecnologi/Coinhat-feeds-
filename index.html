@@ -1,166 +1,173 @@
 <script>
 
-/* ── i18n ── */
-const i18n = {
-  pt:{ title:'🐸 Memecoins em Destaque', sub:'Cotações e gráficos em tempo real', news:'📰 Crypto News', refresh:'Atualizar', vol:'Vol 24h', liq:'Liquidez', mc:'Mkt Cap', contract:'Contrato', search:'Buscar token...' },
-  en:{ title:'🐸 Top Memecoins', sub:'Real-time prices and charts', news:'📰 Crypto News', refresh:'Refresh', vol:'Vol 24h', liq:'Liquidity', mc:'Mkt Cap', contract:'Contract', search:'Search token...' },
-};
+// helper
+const el = id => document.getElementById(id);
 
+// ================= LANG =================
 let lang = 'pt';
 
-function setLang(l, el) {
+function setLang(l, btn){
   lang = l;
   const t = i18n[l];
 
-  document.getElementById('nt-title').textContent = t.title;
-  document.getElementById('nt-sub').innerHTML = t.sub + ' · <span class="live"><span class="live-dot"></span>LIVE</span>';
-  document.getElementById('nt-news').textContent = t.news;
-  document.getElementById('nt-refresh').textContent = t.refresh;
-  document.getElementById('nt-vol').textContent = t.vol;
-  document.getElementById('nt-liq').textContent = t.liq;
-  document.getElementById('nt-mc').textContent = t.mc;
-  document.getElementById('nt-contract').textContent = t.contract;
-  document.getElementById('searchInput').placeholder = t.search;
+  el('nt-title').textContent = t.title;
+  el('nt-sub').innerHTML = t.sub + ' · <span class="live"><span class="live-dot"></span>LIVE</span>';
+  el('nt-news').textContent = t.news;
+  el('nt-refresh').textContent = t.refresh;
+  el('nt-vol').textContent = t.vol;
+  el('nt-liq').textContent = t.liq;
+  el('nt-mc').textContent = t.mc;
+  el('nt-contract').textContent = t.contract;
+  el('searchInput').placeholder = t.search;
 
-  document.querySelectorAll('.lang-opt').forEach(x => x.classList.remove('selected'));
-  if (el) el.classList.add('selected');
+  document.querySelectorAll('.lang-opt').forEach(e => e.classList.remove('selected'));
+  if(btn) btn.classList.add('selected');
 
   toggleLang();
 }
 
-function toggleLang() {
-  document.getElementById('langMenu').classList.toggle('active');
+function toggleLang(){
+  el('langMenu').classList.toggle('active');
 }
 
-/* ── NEWS ── */
-function openNews() {
-  document.getElementById('newsPanel').classList.add('open');
-  document.getElementById('overlay').classList.add('active');
-}
-function closeNews() {
-  document.getElementById('newsPanel').classList.remove('open');
-  document.getElementById('overlay').classList.remove('active');
+// ================= CACHE =================
+let cache = { data:null, time:0 };
+
+// ================= FETCH LIMIT =================
+async function fetchWithLimit(arr, limit=4){
+  const results = [];
+  const executing = [];
+
+  for(const item of arr){
+    const p = fetch(`https://api.dexscreener.com/latest/dex/tokens/${item.tokenAddress}`)
+      .then(r=>r.json())
+      .then(d=>d.pairs?.[0] || null)
+      .catch(()=>null);
+
+    results.push(p);
+
+    if(limit <= arr.length){
+      const e = p.then(()=>executing.splice(executing.indexOf(e),1));
+      executing.push(e);
+      if(executing.length >= limit){
+        await Promise.race(executing);
+      }
+    }
+  }
+
+  return Promise.all(results);
 }
 
-/* ── UTILS ── */
-function fmt(n) {
-  if (!n || isNaN(n)) return '—';
-  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return '$' + (n/1e3).toFixed(2) + 'K';
-  return '$' + n.toFixed(4);
-}
-
-function fmtChg(c) {
-  if (c == null) return '';
-  return (c >= 0 ? '+' : '') + c.toFixed(2) + '%';
-}
-
-/* ── LOAD MEMECOINS ── */
+// ================= LOAD =================
 let memeData = [];
 
-async function loadMemecoins() {
-  try {
-    const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=meme');
+async function loadMemecoins(){
+  const now = Date.now();
+
+  // cache 20s
+  if(cache.data && now - cache.time < 20000){
+    renderMemes(cache.data);
+    renderTicker(cache.data);
+    return;
+  }
+
+  try{
+    const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
     const data = await res.json();
 
-    memeData = (data.pairs || []).slice(0, 12);
-    renderMemes(memeData);
+    const items = data.slice(0,12);
+    const details = await fetchWithLimit(items, 4);
 
-  } catch {
-    document.getElementById('memeGrid').innerHTML =
-      '<p style="color:gray;padding:20px">Erro ao carregar dados</p>';
+    memeData = details.filter(Boolean);
+
+    cache = { data:memeData, time:now };
+
+    renderMemes(memeData);
+    renderTicker(memeData);
+
+  }catch(e){
+    console.error(e);
+    el('memeGrid').innerHTML = '<p style="padding:20px;color:#888">Erro ao carregar</p>';
   }
 }
 
-function renderMemes(pairs) {
-  const grid = document.getElementById('memeGrid');
+// ================= RENDER =================
+function renderMemes(pairs){
+  const grid = el('memeGrid');
   grid.innerHTML = '';
 
-  pairs.forEach(pair => {
+  pairs.forEach((pair,i)=>{
+    const name = pair.baseToken?.name || '—';
+    const sym = pair.baseToken?.symbol || '—';
+    const price = parseFloat(pair.priceUsd) || 0;
+    const chg = pair.priceChange?.h24 || 0;
+    const pos = chg >= 0;
 
-    const div = document.createElement('div');
-    div.className = 'meme-card';
+    const card = document.createElement('div');
+    card.className = 'meme-card';
 
-    div.innerHTML = `
-      <div class="meme-name">${pair.baseToken?.name}</div>
-      <div>${fmt(pair.priceUsd)}</div>
-      <div>${fmtChg(pair.priceChange?.h24)}</div>
+    card.innerHTML = `
+      <div class="meme-top">
+        <img class="meme-logo" src="${pair.info?.imageUrl||''}">
+        <div>
+          <div class="meme-name">${name}</div>
+          <div class="meme-sym">${sym}</div>
+        </div>
+      </div>
+
+      <div>
+        <span class="meme-price">$${price.toFixed(6)}</span>
+        <span class="meme-chg ${pos?'pos':'neg'}">${chg.toFixed(2)}%</span>
+      </div>
     `;
 
-    div.onclick = () => openModal(pair);
+    // UX MELHOR
+    card.onclick = ()=>{
+      card.style.opacity = "0.6";
+      openModal(pair);
+    };
 
-    grid.appendChild(div);
+    grid.appendChild(card);
   });
 }
 
-/* ── MODAL ── */
-function openModal(pair) {
+// ================= TICKER =================
+function renderTicker(pairs){
+  const inner = el('tickerInner');
 
-  document.body.style.overflow = 'hidden';
+  inner.innerHTML = [...pairs,...pairs].map(p=>{
+    const chg = p.priceChange?.h24 || 0;
+    const pos = chg >= 0;
 
-  document.getElementById('m-name').textContent = pair.baseToken?.name;
-  document.getElementById('m-price').textContent = fmt(pair.priceUsd);
-
-  document.getElementById('tokenModal').classList.add('active');
+    return `
+      <span class="ticker-item">
+        ${p.baseToken?.symbol}
+        $${parseFloat(p.priceUsd).toFixed(4)}
+        <span class="${pos?'ticker-chg pos':'ticker-chg neg'}">
+          ${chg.toFixed(2)}%
+        </span>
+      </span>
+    `;
+  }).join('');
 }
 
-function closeModal() {
-  document.body.style.overflow = '';
-  document.getElementById('tokenModal').classList.remove('active');
+// ================= NEWS =================
+function openNews(){
+  el('newsPanel').classList.add('open');
+  el('overlay').classList.add('active');
 }
 
-/* ── SEARCH ── */
-let timeout;
-
-async function onSearch(q) {
-
-  clearTimeout(timeout);
-
-  if (!q || q.length < 2) return;
-
-  timeout = setTimeout(async () => {
-
-    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${q}`);
-    const data = await res.json();
-
-    const box = document.getElementById('search-results');
-
-    box.innerHTML = data.pairs.slice(0, 5).map((p,i) => `
-      <div onclick="selectSearch(${i})">
-        ${p.baseToken.symbol}
-      </div>
-    `).join('');
-
-    window._searchPairs = data.pairs;
-
-  }, 400);
+function closeNews(){
+  el('newsPanel').classList.remove('open');
+  el('overlay').classList.remove('active');
 }
 
-function selectSearch(i) {
-  openModal(window._searchPairs[i]);
+// ================= SECURITY FIX =================
+function openLink(url){
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
-/* ── CHAT ── */
-function toggleChat() {
-  document.getElementById('chatWindow').classList.toggle('open');
-}
-
-function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg = input.value;
-
-  if (!msg) return;
-
-  const box = document.getElementById('chatMessages');
-
-  box.innerHTML += `<div class="chat-msg user">${msg}</div>`;
-  box.innerHTML += `<div class="chat-msg bot">Em desenvolvimento 😄</div>`;
-
-  input.value = '';
-}
-
-/* ── INIT ── */
+// ================= INIT =================
 loadMemecoins();
 setInterval(loadMemecoins, 30000);
 
