@@ -9,20 +9,26 @@
 body{
  margin:0;
  font-family:Arial;
- background:#050814;
- color:#00ffd5;
+ background:#f5f7ff;
+ color:#111;
 }
 
+/* HEADER CLEAN */
 header{
  display:flex;
  justify-content:space-between;
  align-items:center;
  padding:12px;
- background:#08122b;
- border-bottom:2px solid #00ffff;
+ background:#ffffff;
+ border-bottom:2px solid #00c2ff;
+ box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
-.icon{font-size:26px;cursor:pointer}
+.icon{
+ font-size:26px;
+ cursor:pointer;
+ color:#00aaff;
+}
 
 /* SIDEBAR */
 .sidebar{
@@ -31,22 +37,33 @@ header{
  top:0;
  width:300px;
  height:100%;
- background:#06101f;
+ background:#ffffff;
  padding:15px;
  transition:0.3s;
  overflow-y:auto;
+ box-shadow:2px 0 10px rgba(0,0,0,0.1);
 }
-.sidebar.open{left:0}
+.sidebar.open{left:0;}
 
 .closeBtn{
  cursor:pointer;
- color:#00ffff;
- font-size:20px;
+ font-size:18px;
+ color:#00aaff;
  display:block;
  margin-bottom:10px;
 }
 
-/* GRID */
+/* NEWS */
+.news{
+ background:#f0f8ff;
+ margin:8px 0;
+ padding:10px;
+ border-left:4px solid #00c2ff;
+ border-radius:8px;
+ font-size:13px;
+}
+
+/* CARDS */
 .panel{
  display:flex;
  flex-wrap:wrap;
@@ -54,33 +71,47 @@ header{
 }
 
 .card{
- background:#0b1a33;
+ background:#ffffff;
  margin:10px;
  padding:12px;
  border-radius:12px;
  width:220px;
- border:1px solid #00ffff;
+ border:1px solid #d0eaff;
+ box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* TITLES */
+.title{
+ margin:15px;
+ color:#00aaff;
+ font-weight:bold;
+}
+
+/* LANG */
+.lang{
+ display:none;
+ position:absolute;
+ right:10px;
+ top:55px;
+ background:#fff;
+ padding:10px;
+ border:1px solid #00c2ff;
+ border-radius:10px;
+}
+
+.lang button{
+ display:block;
+ margin:5px 0;
+ background:none;
+ border:1px solid #00c2ff;
+ color:#00aaff;
+ cursor:pointer;
 }
 
 /* CHART */
 canvas{
  width:100%;
  height:60px;
-}
-
-/* NEWS */
-.news{
- background:#081f3a;
- margin:8px 0;
- padding:10px;
- border-left:3px solid #00ffff;
- font-size:13px;
-}
-
-/* TITLES */
-.title{
- margin:15px;
- color:#00ffff;
 }
 </style>
 </head>
@@ -89,108 +120,145 @@ canvas{
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
- <span class="closeBtn" onclick="toggleMenu()">← Fechar</span>
+
+ <span class="closeBtn" onclick="toggleMenu()">← Close</span>
 
  <h3>📰 News</h3>
  <div id="newsBox">Loading...</div>
 
- <hr>
- <button onclick="loadMemes()">🚀 Memecoins</button>
 </div>
 
 <!-- HEADER -->
 <header>
  <div class="icon" onclick="toggleMenu()">☰</div>
  <h3>CoinHatFeeds</h3>
- <div class="icon">🌍</div>
+ <div class="icon" onclick="toggleLang()">🌍</div>
 </header>
 
-<div class="title">🚀 Memecoins Trending (with price + chart)</div>
+<!-- LANG -->
+<div class="lang" id="langBox">
+ <button onclick="setLang('en')">EN</button>
+ <button onclick="setLang('pt')">PT</button>
+ <button onclick="setLang('es')">ES</button>
+ <button onclick="setLang('zh')">ZH</button>
+ <button onclick="setLang('ja')">JA</button>
+ <button onclick="setLang('ar')">AR</button>
+</div>
+
+<!-- MEMECOINS MAIN -->
+<div class="title">🚀 Trending Memecoins</div>
 <div class="panel" id="memes"></div>
 
 <script>
+
+let lang="en";
 
 // ================= MENU =================
 function toggleMenu(){
  document.getElementById("sidebar").classList.toggle("open");
 }
 
+// ================= LANG =================
+function toggleLang(){
+ let b=document.getElementById("langBox");
+ b.style.display = b.style.display==="block"?"none":"block";
+}
+
+const t={
+ en:"Trending Memecoins",
+ pt:"Memecoins em Alta",
+ es:"Memecoins Tendencia",
+ zh:"热门迷因币",
+ ja:"ミームコイン",
+ ar:"ميمكوين"
+};
+
+function setLang(l){
+ lang=l;
+ document.querySelector(".title").innerText=t[l];
+}
+
 // ================= NEWS =================
 async function loadNews(){
  const box=document.getElementById("newsBox");
 
- const res=await fetch("https://api.coingecko.com/api/v3/status_updates");
- const data=await res.json();
+ try{
+  const res=await fetch("https://api.coingecko.com/api/v3/status_updates");
+  const data=await res.json();
 
- const news=(data.status_updates||[]).slice(0,3);
+  const news=(data.status_updates||[]).slice(0,3);
 
- box.innerHTML="";
+  box.innerHTML="";
 
- news.forEach(n=>{
-  box.innerHTML+=`
-  <div class="news">
-   📰 ${n.description.slice(0,100)}...
-  </div>`;
- });
+  if(news.length===0){
+   box.innerHTML="No news found";
+   return;
+  }
+
+  news.forEach(n=>{
+   box.innerHTML+=`
+   <div class="news">
+    📰 ${n.description.slice(0,120)}...
+   </div>`;
+  });
+
+ }catch(e){
+  box.innerHTML="News error";
+ }
 }
 
-// ================= MEMECOINS WITH PRICE + CHART =================
+// ================= MEMECOINS + CHART =================
 async function loadMemes(){
 
  const box=document.getElementById("memes");
  box.innerHTML="Loading...";
 
- // 1. trending coins
  const res=await fetch("https://api.coingecko.com/api/v3/search/trending");
  const data=await res.json();
 
- const coins = (data.coins||[]).slice(0,8);
+ const coins=(data.coins||[]).slice(0,10);
 
  box.innerHTML="";
 
- for(let item of coins){
+ for(let i of coins){
 
-  let id = item.item.id;
+  let id=i.item.id;
 
-  // 2. fetch market data
-  let m = await fetch(
+  let r=await fetch(
   `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${id}&sparkline=true`
   );
 
-  let mdata = await m.json();
-  let c = mdata[0];
+  let d=await r.json();
+  let c=d[0];
 
   if(!c) continue;
 
   box.innerHTML+=`
   <div class="card">
-   <h3>🚀 ${c.symbol.toUpperCase()}</h3>
+   <h3>${c.symbol.toUpperCase()}</h3>
    <p>$${c.current_price}</p>
-   <p style="color:${c.price_change_percentage_24h>0?'lime':'red'}">
-    ${c.price_change_percentage_24h.toFixed(2)}%
+   <p style="color:${c.price_change_percentage_24h>0?'green':'red'}">
+   ${c.price_change_percentage_24h.toFixed(2)}%
    </p>
-
-   <canvas id="chart-${c.id}"></canvas>
+   <canvas id="c-${c.id}"></canvas>
   </div>`;
 
-  // draw chart after render
   setTimeout(()=>{
-   drawChart(`chart-${c.id}`, c.sparkline_in_7d.price);
+   draw(`c-${c.id}`,c.sparkline_in_7d.price);
   },200);
  }
 }
 
 // ================= SIMPLE CHART =================
-function drawChart(id, data){
- const canvas=document.getElementById(id);
- if(!canvas) return;
+function draw(id,data){
+ const c=document.getElementById(id);
+ if(!c) return;
 
- const ctx=canvas.getContext("2d");
+ const ctx=c.getContext("2d");
+ c.width=220;
+ c.height=60;
 
- canvas.width=220;
- canvas.height=60;
-
- ctx.strokeStyle="#00ffff";
+ ctx.strokeStyle="#00aaff";
  ctx.beginPath();
 
  let min=Math.min(...data);
@@ -200,8 +268,7 @@ function drawChart(id, data){
   let x=i*(220/data.length);
   let y=60-((p-min)/(max-min))*60;
 
-  if(i===0) ctx.moveTo(x,y);
-  else ctx.lineTo(x,y);
+  i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
  });
 
  ctx.stroke();
